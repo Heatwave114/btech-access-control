@@ -130,17 +130,29 @@ def system_behaviour_denied(id: str):
     switch(OFF, denied_led_pin)
 
 def write_to_log(id: str, access_permission: str):
-    entity = _access_list[id]
-    current_door_id = _current_door["id"]
-    log = {
-        "time": datetime.now().strftime(r"%Y:%m:%d::%H:%M:%S:%f"),
-        "door": current_door_id,
-        "permission": access_permission,
-        "name": entity["name"],
-        "id": id,
-        "rank": entity["rank"],
-        "reasons": _reasons,
-    }
+    if id in _access_list:
+        entity = _access_list[id]
+        current_door_id = _current_door["id"]
+        log = {
+            "time": datetime.now().strftime(r"%Y:%m:%d::%H:%M:%S:%f"),
+            "door": current_door_id,
+            "permission": access_permission,
+            "name": entity["name"],
+            "id": id,
+            "rank": entity["rank"],
+            "reasons": _reasons,
+        }
+    else:
+        current_door_id = _current_door["id"]
+        log = {
+            "time": datetime.now().strftime(r"%Y:%m:%d::%H:%M:%S:%f"),
+            "door": current_door_id,
+            "permission": access_permission,
+            "name": "Null",
+            "id": id,
+            "rank": "Null",
+            "reasons": _reasons,
+        }
     print(log)
     # _database.path_to_log.write(log)
 
