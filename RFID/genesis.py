@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import time
 import RPi.GPIO as GPIO
 from datetime import datetime
@@ -30,7 +31,7 @@ GPIO.setup(buzzer_pin, GPIO.OUT)
 # _database = pass
 
 _control = {
-    "allowed_ranks": ["1", "2", "3", "4"],
+    "allowed_ranks": [1, 2, 3, 4],
     "block_all_doors": False,
     "blocked_ids": [],
 }
@@ -64,22 +65,23 @@ _access_list = {
 }
 
 
-_current_door = {
+current_door = {
     "id": 3
 }
 
 default_reason = "In allowed list" # default reason to give access
 _reasons = [default_reason]
 def control_check(id: str) -> bool:
+    global _reasons
     check_status = True
     control_reasons = []
+    
     if id not in _access_list:
         check_status = False
         control_reasons.append("Unknown Id")
-    else:
-        if _access_list[id]["rank"] not in _control["allowed_ranks"]:
-            check_status = False
-            control_reasons.append("Rank restricted")
+    elif _access_list[id]["rank"] not in _control["allowed_ranks"]:
+        check_status = False
+        control_reasons.append("Rank restricted")
 
     if id in _control["blocked_ids"]:
         check_status = False
@@ -87,22 +89,33 @@ def control_check(id: str) -> bool:
     if _control["block_all_doors"]:
         check_status = False
         control_reasons.append("All doors blocked")
+
+    print("control reasons: ", control_reasons)
+    print("check status: ", check_status)
+    print("reasons: ", _reasons)
     
 
-    if control_reasons:
+    if not check_status:
         _reasons = control_reasons
+
+    print("reasons 2: ", _reasons)
+
     return check_status
 
 def read():
+    try:
         id, _ = reader.read()
         id = str(id)
         print("RFID", id)
         if control_check(id):
-            write_to_log(id, "granted")
             system_behaviour_granted(id)
         else:
-            write_to_log(id, "denied")
             system_behaviour_denied(id)
+    # finally:
+    #     GPIO.cleanup()
+    except KeyboardInterrupt:
+        sys.exit()
+    read()
 
 
 ON = True; OFF = False; # for readability when switching
@@ -132,7 +145,7 @@ def system_behaviour_denied(id: str):
 def write_to_log(id: str, access_permission: str):
     if id in _access_list:
         entity = _access_list[id]
-        current_door_id = _current_door["id"]
+        current_door_id = current_door["id"]
         log = {
             "time": datetime.now().strftime(r"%Y:%m:%d::%H:%M:%S:%f"),
             "door": current_door_id,
@@ -143,7 +156,7 @@ def write_to_log(id: str, access_permission: str):
             "reasons": _reasons,
         }
     else:
-        current_door_id = _current_door["id"]
+        current_door_id = current_door["id"]
         log = {
             "time": datetime.now().strftime(r"%Y:%m:%d::%H:%M:%S:%f"),
             "door": current_door_id,
@@ -156,10 +169,10 @@ def write_to_log(id: str, access_permission: str):
     print(log)
     # _database.path_to_log.write(log)
 
-try:
-    read()
-finally:
-    GPIO.cleanup()
+# try:
+read()
+# finally:
+#     GPIO.cleanup()
 
         
 
