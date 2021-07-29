@@ -61,13 +61,21 @@ GPIO.setup(buzzer_pin, GPIO.OUT)
 
 database = Database()
 
-_access_list = database.return_access_list()
-_control = database.return_control()
-_door = database.return_door()
+def __access_list():
+    return database.return_access_list()
 
-default_reason = "In allowed list" # default reason to give access
+def __control():
+    return database.return_control()
+
+def __door():
+    return database.return_door()
+
+default_reason = "Passed condition check" # default reason to give access
 _reasons = [default_reason]
 def control_check(id: str) -> bool:
+    _access_list = __access_list()
+    _control = __control()
+    _door = __door()
     global _reasons
     check_status = True
     control_reasons = []
@@ -75,9 +83,13 @@ def control_check(id: str) -> bool:
     if id not in _access_list:
         check_status = False
         control_reasons.append("Unknown Id")
-    elif _access_list[id]["rank"] not in _control["allowed_ranks"]:
-        check_status = False
-        control_reasons.append("Rank restricted")
+    else:
+        if _access_list[id]["rank"] not in _control["allowed_ranks"]:
+            check_status = False
+            control_reasons.append("Rank restricted")
+        if _door["id"] not in _access_list[id]["access"]:
+            check_status = False
+            control_reasons.append(f"No rights to door {_door['id']}")
 
     if id in _control["blocked_ids"]:
         check_status = False
@@ -93,7 +105,6 @@ def control_check(id: str) -> bool:
     return check_status
 
 def read():
-    print('----------------------------------')
     try:
         id, _ = reader.read()
         id = str(id)
@@ -118,6 +129,16 @@ def switch(level: bool, pin: int):
     else:
         GPIO.output(pin, GPIO.LOW)
 
+def started_reading_behaviour():
+    for _ in range(5):
+        switch(ON, granted_led_pin)
+        switch(OFF, denied_led_pin)
+        time.sleep(.1)
+        switch(OFF, granted_led_pin)
+        switch(ON, denied_led_pin)
+        time.sleep(.1)
+    switch(OFF, denied_led_pin)
+
 def system_behaviour_granted(id: str):
     write_to_log(id, "granted")
     switch(ON, granted_led_pin)
@@ -137,6 +158,8 @@ def system_behaviour_denied(id: str):
     switch(OFF, denied_led_pin)
 
 def write_to_log(id: str, access_permission: str):
+    _access_list = __access_list()
+    _door = __door()
     if id in _access_list:
         entity = _access_list[id]
         current_door_id = _door["id"]
@@ -160,7 +183,9 @@ def write_to_log(id: str, access_permission: str):
             "rank": "Null",
             "reasons": _reasons,
         }
+    database.write_to_logs(log)
     print(log)
     # _database.path_to_log.write(log)
 
+started_reading_behaviour()
 read()
