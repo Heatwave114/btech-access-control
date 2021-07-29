@@ -59,7 +59,21 @@ GPIO.setup(buzzer_pin, GPIO.OUT)
 #     "id": 3
 # }
 
-database = Database()
+ON = True; OFF = False; # for readability when switching
+def switch(level: bool, pin: int):
+    if level:
+        GPIO.output(pin, GPIO.HIGH)
+    else:
+        GPIO.output(pin, GPIO.LOW)
+
+def on_snapshot():
+    for _ in range(5):
+        switch(ON, granted_led_pin)
+        time.sleep(.1)
+        switch(OFF, granted_led_pin)
+        time.sleep(.1)
+
+database = Database(on_snapshot)
 
 def __access_list():
     return database.return_access_list()
@@ -121,14 +135,6 @@ def read():
     _reasons = default_reason
     read()
 
-
-ON = True; OFF = False; # for readability when switching
-def switch(level: bool, pin: int):
-    if level:
-        GPIO.output(pin, GPIO.HIGH)
-    else:
-        GPIO.output(pin, GPIO.LOW)
-
 def started_reading_behaviour():
     for _ in range(5):
         switch(ON, granted_led_pin)
@@ -186,6 +192,13 @@ def write_to_log(id: str, access_permission: str):
     database.write_to_logs(log)
     print(log)
     # _database.path_to_log.write(log)
+
+def on_snapshot():
+    for _ in range(5):
+        switch(ON, granted_led_pin)
+        time.sleep(.1)
+        switch(OFF, granted_led_pin)
+        time.sleep(.1)
 
 started_reading_behaviour()
 read()

@@ -5,8 +5,9 @@ from firebase_admin import firestore
 
 class Database:
     callback_done = threading.Event()
-    def __init__(self):
-        cred = credentials.Certificate("../btech-69920-firebase-adminsdk-zxrjx-1ccf20dca3.json")
+    def __init__(self, on_snapshot_external):
+        self.on_snaphot_external = on_snapshot_external
+        cred = credentials.Certificate('/home/pi/btech/btech-69920-firebase-adminsdk-zxrjx-1ccf20dca3.json')
         firebase_admin.initialize_app(cred)
         self.db = firestore.client()
         self.get_access_list()
@@ -14,27 +15,31 @@ class Database:
         self.get_door()
 
     def get_access_list(self):
-        self._access_list = {}
-        _access_list_no_id = self.db.collection(u'list')
-        docs = _access_list_no_id.stream()
-        for doc in docs:
-            self._access_list.update({doc.id: doc.to_dict()})
-        print(self._access_list)
+        doc_ref = self.db.collection(u'list').document(u'allowed')
+        self._access_list = doc_ref.get().to_dict()
+        def on_snapshot(doc_snapshot, changes, read_time):
+            self._access_list = doc_ref.get().to_dict()
+            self.on_snaphot_external()
+            print('--------------access_list_changed-------------------')
+        doc_watch = doc_ref.on_snapshot(on_snapshot)
+        # print('list----------', self._access_list)
 
     def get_control(self):
         doc_ref = self.db.collection(u'access').document(u'control')
-        # self._control = doc_ref.get().to_dict()
+        self._control = doc_ref.get().to_dict()
         def on_snapshot(doc_snapshot, changes, read_time):
             self._control = doc_ref.get().to_dict()
+            self.on_snaphot_external()
             print('--------------control_changed-------------------')
         doc_watch = doc_ref.on_snapshot(on_snapshot)
         # print('control----------', self._control)
 
     def get_door(self):
         doc_ref = self.db.collection(u'access').document(u'door')
-        # self._door = doc_ref.get().to_dict()
+        self._door = doc_ref.get().to_dict()
         def on_snapshot(doc_snapshot, changes, read_time):
             self._door = doc_ref.get().to_dict()
+            self.on_snaphot_external()
             print('--------------door_changed-------------------')
         doc_watch = doc_ref.on_snapshot(on_snapshot)
         # print('door----------', self._door)
